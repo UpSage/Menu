@@ -1,34 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-/**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
- */
--->
-<widgets xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Widget:etc/widget.xsd">
-    <widget id="upsage_menu_widget" class="UpSage\Menu\Block\Widget\Menu">
-        <label translate="true">Menu</label>
-        <description translate="true">Contents of Menu</description>
-        <parameters>
-            <parameter name="menu_id" xsi:type="block" visible="true" required="true" sort_order="20">
-                <label translate="true">Menu</label>
-                <block class="UpSage\Menu\Block\Adminhtml\Menu\Widget\Chooser">
-                    <data>
-                        <item name="button" xsi:type="array">
-                            <item name="open" xsi:type="string" translate="true">Select Menu...</item>
-                        </item>
-                    </data>
-                </block>
-            </parameter>
-            <parameter name="template" xsi:type="select" visible="true" required="true" sort_order="10">
-                <label translate="true">Template</label>
-                <options>
-                    <option name="default" value="widget/menu/default.phtml" selected="true">
-                        <label translate="true">Menu Default Template</label>
-                    </option>
-                </options>
-            </parameter>
-        </parameters>
-    </widget>
+
+<widgets xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Widget:etc/widget.xsd">
+ <widget id="upsage_menu_widget" class="UpSage\Menu\Block\Widget\Menu">
+  <label translate="true">Menu</label>
+  <description translate="true">Contents of Menu</description>
+  <parameters>
+   <parameter name="menu_id" xsi:type="block" visible="true" required="true" sort_order="20">
+    <label translate="true">Menu</label>
+    <block class="UpSage\Menu\Block\Adminhtml\Menu\Widget\Chooser">
+     <data>
+      <item name="button" xsi:type="array">
+       <item name="open" xsi:type="string" translate="true">Select Menu...</item>
+      </item>
+     </data>
+    </block>
+   </parameter>
+   <parameter name="template" xsi:type="select" visible="true" required="true" sort_order="10">
+    <label translate="true">Template</label>
+    <options>
+     <option name="default" value="widget/menu/default.phtml" selected="true">
+      <label translate="true">Menu Default Template</label>
+     </option>
+    </options>
+   </parameter>
+  </parameters>
+ </widget>
 </widgets>
