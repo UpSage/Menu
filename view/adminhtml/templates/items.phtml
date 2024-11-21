@@ -112,6 +112,11 @@
     let currentParentForNewItem = null;
     let nextId = 123;
 
+    function toggleSelectAllButton() {
+            const hasItems = $('#admin__container-treelist').children().length > 0;
+            $('#select-all').toggle(hasItems);
+        }
+
     function generateTreeJSON($container) {
     const treeData = [];
     $container.children('.admin__item-treelist').each(function () {
@@ -125,6 +130,7 @@
     });
     return treeData;
 }
+
 
 function updateJsonOutput() {
     const treeJSON = generateTreeJSON($('#admin__container-treelist'));
@@ -174,6 +180,7 @@ function updateJsonOutput() {
 
             $container.append($item);
         });
+        toggleSelectAllButton();
     }
 
     function initializeSortableAndDroppable() {
@@ -303,6 +310,7 @@ function updateJsonOutput() {
 
             initializeSortableAndDroppable();
             updateJsonOutput(); 
+            toggleSelectAllButton();
 
             $('.popup-overlay, #add-popup').hide();
             currentParentForNewItem = null;
@@ -319,6 +327,7 @@ function updateJsonOutput() {
         $(this).closest('.admin__item-treelist').remove();
         updateJsonOutput();
         updateDeleteButtonVisibility();
+        toggleSelectAllButton();
     });
 
     $('#delete-selected').click(function () {
@@ -327,11 +336,13 @@ function updateJsonOutput() {
         });
         updateJsonOutput();
         updateDeleteButtonVisibility();
+        toggleSelectAllButton();
     });
 
     renderTreeList(treeData, $('#admin__container-treelist'));
     setTimeout(initializeSortableAndDroppable, 0);
     updateJsonOutput();
+    toggleSelectAllButton();
 });
 
 
