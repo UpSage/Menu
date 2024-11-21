@@ -1,0 +1,340 @@
+<style>
+ .admin__actions-treelist { margin-bottom: 10px; }
+ .admin__items-treelist .ui-state-highlight { height: 1px; line-height: 1px; background-color: #2196F3; }
+ .admin__items-treelist .drop-hint { border: 2px dashed #ccc; }
+ .admin__item-treelist { padding: 10px; background-color: #f5f5f5; border-bottom: 1px solid #ddd; position: relative; }
+ .admin__item-treelist.ui-sortable-helper { border: 1px solid #ccc !important; }
+ .admin__item-treelist-drag-handle { cursor: -moz-grab; cursor: -webkit-grab; cursor: move; font-size: 0; padding: 0 1rem 0 0; vertical-align: middle; display: inline-block; text-decoration: none; }
+ .admin__item-treelist-drag-handle:before { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; font-size: 1.8rem; line-height: inherit; color: #9e9e9e; content: '\e617'; font-family: 'Admin Icons'; vertical-align: middle; display: inline-block; font-weight: normal; overflow: hidden; speak: none; text-align: center; }
+ .admin__item-treelist-actions { display: flex; align-items: center; gap: 8px; }
+ .admin__item-treelist-action { background-color: transparent; border-color: transparent; box-shadow: none; padding-left: 0; padding-right: 0; color: #514943; }
+ .admin__item-treelist-action:hover,
+ .admin__item-treelist-action:focus { background-color: transparent; }
+ .admin__item-treelist-action:before { -webkit-font-smoothing: antialiased; font-family: 'Admin Icons'; font-style: normal; font-weight: normal; line-height: 1; speak: none; }
+ .admin__item-treelist-action span { display: none; text-indent: -999; }
+ .admin__item-treelist-action.add-child-item:before { content: '\e61d'; font-size: 2rem; }
+ .admin__item-treelist-action.edit-item:before { content: '\e631'; font-size: 2rem; }
+ .admin__item-treelist-action.delete-item:before { content: '\e630'; font-size: 2rem; }
+ .admin__item-treelist-checkbox { margin-right: 10px; }
+ .admin__item-treelist-name { flex-grow: 1; font-weight: 600; }
+ .admin__item-treelist-options { display: flex; align-items: center; }
+ .admin__childitem-treelist { gap: 10px; margin-left: 5px; padding: 5px 0 5px 10px; min-height: 0; }
+ .admin__childitem-treelist .admin__item-treelist { padding-right: 0; padding-bottom: 0; border-bottom: none; }
+ 
+ #edit-popup,
+ #add-popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; }
+ 
+ .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
+</style>
+
+<label class="admin__field-label">
+ <span>Items</span>
+</label>
+
+<div class="admin__field-control">
+ <div class="admin__control-treelist">
+    
+  <div class="admin__actions-treelist">
+   <button id="select-all" class="admin__action-treelist">Select All</button>
+   <button id="add-root-item" class="admin__action-treelist">Add Root Item</button>
+   <button id="delete-selected" class="admin__action-treelist" style="display: none;">Delete Selected Items</button>
+  </div>
+  
+  <div id="admin__container-treelist" class="admin__items-treelist"></div>
+  <textarea id="json-output" style="width: 100%; height: 150px; display: none;" readonly></textarea>
+
+ </div>
+</div>
+
+<div class="popup-overlay"></div>
+
+<div id="edit-popup">
+ <h3>Edit Item</h3>
+ <input type="text" id="edit-name" placeholder="Item Name">
+ <div>
+  <button id="save-edit">Save</button>
+  <button id="cancel-edit">Cancel</button>
+ </div>
+</div>
+
+<div id="add-popup">
+ <h3>Add Item</h3>
+ <input type="text" id="add-name" placeholder="Item Name">
+ <div>
+  <button id="save-add">Save</button>
+  <button id="cancel-add">Cancel</button>
+ </div>
+</div>
+
+<script>
+ require([
+  'jquery',
+  'jquery/ui'
+ ], function($) {
+
+    $(document).ready(function () {
+    let treeData = [
+  {
+    "id": 123,
+    "name": "rwerwe",
+    "children": [
+      {
+        "id": 125,
+        "name": "asdasd",
+        "children": [
+          {
+            "id": 128,
+            "name": "kkkkkkk",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 124,
+        "name": "dsadasd",
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": 126,
+    "name": "oipiopiopiop",
+    "children": []
+  },
+  {
+    "id": 127,
+    "name": "pppi",
+    "children": []
+  }
+];
+
+    let currentEditItem = null;
+    let currentParentForNewItem = null;
+    let nextId = 123;
+
+    function generateTreeJSON($container) {
+    const treeData = [];
+    $container.children('.admin__item-treelist').each(function () {
+        const $item = $(this);
+        const children = generateTreeJSON($item.find('> .admin__childitem-treelist'));
+        treeData.push({
+            id: $item.data('id'),
+            name: $item.find('> .admin__item-treelist-options > .admin__item-treelist-name').text(),
+            children: children
+        });
+    });
+    return treeData;
+}
+
+function updateJsonOutput() {
+    const treeJSON = generateTreeJSON($('#admin__container-treelist'));
+    $('#json-output').val(JSON.stringify(treeJSON, null, 2));
+}
+
+
+    function updateDeleteButtonVisibility() {
+        const hasCheckedItems = $('.admin__item-treelist-checkbox:checked').length > 0;
+        $('#delete-selected').toggle(hasCheckedItems);
+    }
+
+    function renderTreeList(data, $container) {
+        $container.empty();
+        data.forEach(function (item) {
+            const $item = $(`
+                <div class="admin__item-treelist" data-id="${item.id}">
+                    <div class="admin__item-treelist-options">
+                        <span class="admin__item-treelist-drag-handle"></span>
+
+                        <div class="admin__field admin__field-option">
+                         <input class="admin__control-checkbox admin__item-treelist-checkbox" type="checkbox" id="${item.id}">
+                         <label class="admin__field-label"for="${item.id}"></label>
+                        </div>
+
+                        <span class="admin__item-treelist-name">${item.name}</span>
+                        <div class="admin__item-treelist-actions">
+                            <button class="admin__item-treelist-action add-child-item">
+                             <span>Add Child</span>
+                            </button>
+                            <button class="admin__item-treelist-action edit-item">
+                             <span>Edit</span>
+                            </button>
+                            <button class="admin__item-treelist-action delete-item">
+                             <span>Delete</span>
+                            </button>
+                        </div>
+
+                    </div>
+                    <div class="admin__childitem-treelist"></div>
+                </div>
+            `);
+
+            if (item.children && item.children.length) {
+                renderTreeList(item.children, $item.find('.admin__childitem-treelist'));
+            }
+
+            $container.append($item);
+        });
+    }
+
+    function initializeSortableAndDroppable() {
+        try {
+            $('#admin__container-treelist').sortable('destroy');
+        } catch (e) { }
+
+        try {
+            $('.admin__childitem-treelist').sortable('destroy');
+        } catch (e) { }
+
+        $('#admin__container-treelist').sortable({
+            handle: '.admin__item-treelist-drag-handle',
+            placeholder: 'ui-state-highlight',
+            connectWith: '.admin__childitem-treelist',
+            tolerance: 'pointer',
+            update: updateJsonOutput
+        });
+
+        $('.admin__childitem-treelist').sortable({
+            handle: '.admin__item-treelist-drag-handle',
+            placeholder: 'ui-state-highlight',
+            connectWith: '#admin__container-treelist, .admin__childitem-treelist',
+            tolerance: 'pointer',
+            update: updateJsonOutput,
+            over: function (event, ui) {
+                $(this).addClass('drop-hint');
+            },
+            out: function (event, ui) {
+                $(this).removeClass('drop-hint');
+            },
+            receive: function (event, ui) {
+                $(this).removeClass('drop-hint');
+            }
+        });
+    }
+
+    $(document).on('change', '.admin__item-treelist-checkbox', function () {
+        const $item = $(this).closest('.admin__item-treelist');
+        const isChecked = $(this).prop('checked');
+
+        $item.find('.admin__childitem-treelist .admin__item-treelist-checkbox').prop('checked', isChecked);
+
+        if (!isChecked) {
+            $item.parents('.admin__item-treelist').find('> .admin__item-treelist-options > .admin__item-treelist-checkbox').prop('checked', false);
+        }
+
+        updateDeleteButtonVisibility();
+    });
+
+    $('#select-all').click(function () {
+        const $checkboxes = $('.admin__item-treelist-checkbox');
+        const isCurrentlyChecked = $checkboxes.first().prop('checked');
+        $checkboxes.prop('checked', !isCurrentlyChecked);
+        updateDeleteButtonVisibility();
+    });
+
+    $('#add-root-item').click(function () {
+        currentParentForNewItem = null;
+        $('#add-name').val('');
+        $('.popup-overlay, #add-popup').show();
+    });
+
+    $(document).on('click', '.add-child-item', function () {
+        currentParentForNewItem = $(this).closest('.admin__item-treelist');
+        $('#add-name').val('');
+        $('.popup-overlay, #add-popup').show();
+    });
+
+    $(document).on('click', '.edit-item', function () {
+        currentEditItem = $(this).closest('.admin__item-treelist');
+        const name = currentEditItem.find('> .admin__item-treelist-options > .admin__item-treelist-name').text().trim();
+        $('#edit-name').val(name);
+        $('.popup-overlay, #edit-popup').show();
+    });
+
+    $('#save-edit').click(function () {
+        if (currentEditItem) {
+            const newName = $('#edit-name').val().trim();
+            if (newName) {
+                currentEditItem.find('> .admin__item-treelist-options > .admin__item-treelist-name').text(newName);
+                $('.popup-overlay, #edit-popup').hide();
+                currentEditItem = null;
+                updateJsonOutput();
+            }
+        }
+    });
+
+    $('#save-add').click(function () {
+        const newName = $('#add-name').val().trim();
+        if (newName) {
+            const newItem = {
+                id: nextId++,
+                name: newName
+            };
+
+            const $newItemEl = $(`
+                <div class="admin__item-treelist" data-id="${newItem.id}">
+                    <div class="admin__item-treelist-options">
+                        <span class="admin__item-treelist-drag-handle"></span>
+                        <div class="admin__field admin__field-option">
+                         <input class="admin__control-checkbox admin__item-treelist-checkbox" type="checkbox" id="${newItem.id}">
+                         <label class="admin__field-label"for="${newItem.id}"></label>
+                        </div>
+                        <span class="admin__item-treelist-name">${newName}</span>
+                        <div class="admin__item-treelist-actions">
+                            <button class="admin__item-treelist-action add-child-item">
+                             <span>Add Child</span>
+                            </button>
+                            <button class="admin__item-treelist-action edit-item">
+                             <span>Edit</span>
+                            </button>
+                            <button class="admin__item-treelist-action delete-item">
+                             <span>Delete</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="admin__childitem-treelist"></div>
+                </div>
+            `);
+
+            if (currentParentForNewItem) {
+                currentParentForNewItem.find('> .admin__childitem-treelist').append($newItemEl);
+            } else {
+                $('#admin__container-treelist').append($newItemEl);
+            }
+
+            initializeSortableAndDroppable();
+            updateJsonOutput(); 
+
+            $('.popup-overlay, #add-popup').hide();
+            currentParentForNewItem = null;
+        }
+    });
+
+    $('#cancel-edit, #cancel-add, .popup-overlay').click(function () {
+        $('.popup-overlay, #edit-popup, #add-popup').hide();
+        currentEditItem = null;
+        currentParentForNewItem = null;
+    });
+
+    $(document).on('click', '.delete-item', function () {
+        $(this).closest('.admin__item-treelist').remove();
+        updateJsonOutput();
+        updateDeleteButtonVisibility();
+    });
+
+    $('#delete-selected').click(function () {
+        $('.admin__item-treelist-checkbox:checked').each(function () {
+            $(this).closest('.admin__item-treelist').remove();
+        });
+        updateJsonOutput();
+        updateDeleteButtonVisibility();
+    });
+
+    renderTreeList(treeData, $('#admin__container-treelist'));
+    setTimeout(initializeSortableAndDroppable, 0);
+    updateJsonOutput();
+});
+
+
+ });
+
+</script>

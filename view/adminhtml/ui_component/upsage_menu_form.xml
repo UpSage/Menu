@@ -142,12 +142,12 @@
   <htmlContent name="html_content">
    <settings>
     <additionalClasses>
-     <class name="html-content-class">true</class>
+     <class name="admin__field">true</class>
     </additionalClasses>
    </settings>
    <block name="html_content_block" class="Magento\Backend\Block\Template">
     <arguments>
-     <argument name="template" xsi:type="string">UpSage_Menu::tree.phtml</argument>
+     <argument name="template" xsi:type="string">UpSage_Menu::items.phtml</argument>
     </arguments>
    </block>
   </htmlContent>
